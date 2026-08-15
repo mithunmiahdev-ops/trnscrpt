@@ -1,0 +1,28 @@
+{
+  "name": "trnscrpt-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend API and worker for Trnscrpt, a no-signup video transcript generator.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "worker": "node src/queue/worker.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0",
+    "bullmq": "^5.12.0",
+    "ioredis": "^5.4.1",
+    "pg": "^8.12.0",
+    "dotenv": "^16.4.5",
+    "nanoid": "^5.0.7",
+    "pdfkit": "^0.15.0",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
