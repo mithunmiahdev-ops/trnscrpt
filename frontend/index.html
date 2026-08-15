@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trnscrpt — Turn Any Video Into Text</title>
+<meta name="description" content="Fast, free, multilingual transcripts for YouTube, Facebook, Instagram, TikTok, and Pinterest videos. No account needed." />
+<script>
+  // Set this to your deployed backend's URL before going live, e.g.:
+  // window.TRNSCRPT_API_BASE_URL = 'https://api.trnscrpt.com';
+  window.TRNSCRPT_API_BASE_URL = window.TRNSCRPT_API_BASE_URL || 'http://localhost:4000';
+</script>
+<style>
+  :root{
+    --bg: #FAFAF8;
+    --surface: #FFFFFF;
+    --border: #E6E4DD;
+    --ink: #1C1C1A;
+    --ink-soft: #57564F;
+    --ink-faint: #8B8A82;
+    --accent: #2F7A4C;
+    --accent-dark: #24603A;
+    --accent-wash: #EAF4EE;
+    --danger: #B3452F;
+    --danger-wash: #FBEEEA;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgba(28,28,26,0.04), 0 4px 16px rgba(28,28,26,0.05);
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font);
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px;}
+
+  /* Header */
+  header.site{
+    border-bottom:1px solid var(--border);
+    background:var(--bg);
+    position:sticky;top:0;z-index:20;
+  }
+  .site-inner{
+    max-width:880px;margin:0 auto;padding:16px 20px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .logo{font-weight:700;font-size:19px;letter-spacing:-0.02em;color:var(--ink);}
+  .logo .dot{color:var(--accent);}
+  nav.main{display:flex;gap:26px;}
+  nav.main a{font-size:14px;color:var(--ink-soft);font-weight:500;}
+  nav.main a:hover{color:var(--ink);}
+  nav.main a.active{color:var(--ink);}
+  .nav-toggle{display:none;background:none;border:1px solid var(--border);border-radius:8px;width:36px;height:36px;align-items:center;justify-content:center;}
+  @media (max-width:640px){
+    nav.main{display:none;}
+    .nav-toggle{display:flex;}
+    nav.main.open{
+      display:flex;flex-direction:column;gap:0;position:absolute;top:57px;left:0;right:0;
+      background:var(--surface);border-bottom:1px solid var(--border);padding:8px 20px 16px;
+    }
+    nav.main.open a{padding:10px 0;border-bottom:1px solid var(--border);}
+    nav.main.open a:last-child{border-bottom:none;}
+  }
+
+  /* Views */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Hero */
+  .hero{padding:64px 0 40px;text-align:center;}
+  .hero h1{
+    font-size:clamp(32px,5vw,48px);
+    line-height:1.08;letter-spacing:-0.02em;margin:0 0 14px;font-weight:700;
+  }
+  .hero p.sub{
+    color:var(--ink-soft);font-size:17px;margin:0 auto 34px;max-width:480px;
+  }
+  .search-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);padding:10px;max-width:640px;margin:0 auto;
+  }
+  .search-row{display:flex;gap:8px;}
+  .search-row input{
+    flex:1;border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+    font-size:15px;color:var(--ink);background:var(--surface);min-width:0;
+  }
+  .search-row input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .btn{
+    border:none;border-radius:8px;padding:14px 22px;font-weight:600;font-size:15px;
+    cursor:pointer;white-space:nowrap;transition:transform .05s ease, background .15s ease;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-primary:disabled{background:#B9C9BE;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--border);}
+  .btn-ghost:hover{background:var(--accent-wash);color:var(--ink);border-color:var(--accent);}
+  .btn-sm{padding:9px 14px;font-size:13px;border-radius:7px;}
+  @media (max-width:520px){
+    .search-row{flex-direction:column;}
+    .search-row .btn{width:100%;}
+  }
+  .field-error{color:var(--danger);font-size:13.5px;margin-top:10px;text-align:left;padding-left:4px;}
+
+  .platforms{
+    display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin:26px 0 10px;color:var(--ink-faint);
+  }
+  .platforms span{font-size:13px;font-weight:600;letter-spacing:0.01em;}
+  .microcopy{text-align:center;color:var(--ink-faint);font-size:13px;margin-top:6px;}
+
+  /* How it works / why */
+  .section{padding:44px 0;}
+  .section h2{font-size:22px;font-weight:700;text-align:center;margin:0 0 30px;letter-spacing:-0.01em;}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  @media (max-width:640px){.steps{grid-template-columns:1fr;}}
+  .step-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;
+  }
+  .step-num{
+    width:26px;height:26px;border-radius:50%;background:var(--accent-wash);color:var(--accent-dark);
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;margin-bottom:12px;
+  }
+  .step-card h3{font-size:15px;margin:0 0 6px;}
+  .step-card p{font-size:13.5px;color:var(--ink-soft);margin:0;}
+
+  .why-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+  .chip{
+    background:var(--accent-wash);color:var(--accent-dark);border-radius:999px;
+    padding:8px 16px;font-size:13.5px;font-weight:600;
+  }
+
+  .ad-slot{
+    border:1px dashed var(--border);border-radius:var(--radius);background:var(--surface);
+    color:var(--ink-faint);font-size:12.5px;text-align:center;padding:22px;letter-spacing:0.03em;
+    text-transform:uppercase;
+  }
+
+  footer.site{border-top:1px solid var(--border);padding:34px 0 30px;margin-top:20px;}
+  .footer-links{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;font-size:13.5px;color:var(--ink-soft);margin-bottom:16px;}
+  .footer-links a:hover{color:var(--ink);}
+  .disclaimer{text-align:center;font-size:12.5px;color:var(--ink-faint);max-width:520px;margin:0 auto 14px;}
+  .copyright{text-align:center;font-size:12px;color:var(--ink-faint);}
+
+  /* Processing view */
+  .proc-wrap{max-width:520px;margin:0 auto;padding:90px 20px;text-align:center;}
+  .proc-wrap h2{font-size:20px;margin:0 0 6px;}
+  .proc-wrap p.hint{color:var(--ink-soft);font-size:14px;margin:0 0 34px;}
+  .progress-track{height:6px;border-radius:99px;background:var(--accent-wash);overflow:hidden;margin-bottom:26px;}
+  .progress-fill{height:100%;background:var(--accent);width:0%;border-radius:99px;transition:width .4s ease;}
+  .stage-list{display:flex;flex-direction:column;gap:10px;text-align:left;}
+  .stage{
+    display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-faint);padding:6px 2px;
+  }
+  .stage .dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;}
+  .stage.active{color:var(--ink);font-weight:600;}
+  .stage.active .dot{background:var(--accent);}
+  .stage.done{color:var(--ink-soft);}
+  .stage.done .dot{background:var(--accent);}
+
+  /* Results view */
+  .results-wrap{padding:36px 0 60px;}
+  .res-header{margin-bottom:18px;}
+  .res-header h2{font-size:24px;margin:0 0 8px;letter-spacing:-0.01em;}
+  .meta-row{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);}
+  .meta-pill{
+    background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px 12px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .meta-pill b{color:var(--ink);}
+  .status-ok{color:var(--accent-dark);}
+
+  .controls-bar{
+    display:flex;gap:8px;flex-wrap:wrap;margin:20px 0;
+  }
+
+  .transcript-panel{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+    max-height:480px;overflow-y:auto;padding:6px;
+  }
+  .seg{
+    display:flex;gap:14px;padding:12px 14px;border-radius:8px;cursor:pointer;
+  }
+  .seg:hover{background:var(--accent-wash);}
+  .seg .ts{
+    flex-shrink:0;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;
+    color:var(--accent-dark);background:var(--accent-wash);border-radius:6px;
+    padding:3px 7px;height:fit-content;
+  }
+  .seg .txt{font-size:14.5px;color:var(--ink);}
+
+  .panel-toolbar{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:22px;
+  }
+  select.lang-select{
+    border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13.5px;color:var(--ink);
+    background:var(--surface);
+  }
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  .summary-box{
+    margin-top:22px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;
+  }
+  .summary-box h3{font-size:14px;margin:0 0 8px;}
+  .summary-box p{font-size:14px;color:var(--ink-soft);margin:0 0 12px;}
+  .summary-box ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-soft);}
+  .summary-box li{margin-bottom:5px;}
+
+  .new-link{display:inline-block;margin-top:26px;font-size:13.5px;color:var(--accent-dark);font-weight:600;}
+  .new-link:hover{text-decoration:underline;}
+
+  /* Static content pages */
+  .page{padding:52px 0 60px;max-width:660px;margin:0 auto;}
+  .page h1{font-size:26px;margin:0 0 18px;}
+  .page h2{font-size:16px;margin:26px 0 8px;}
+  .page p, .page li{color:var(--ink-soft);font-size:14.5px;}
+  .page ul{padding-left:20px;}
+  .back-link{display:inline-block;margin-bottom:22px;font-size:13.5px;color:var(--ink-soft);}
+  .back-link:hover{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <div class="logo">Trnscrpt<span class="dot">.</span></div>
+    <nav class="main" id="mainNav">
+      <a href="#" data-view="home" class="active">Home</a>
+      <a href="#" data-view="about">About</a>
+      <a href="#" data-view="how">How It Works</a>
+      <a href="#" data-view="contact">Contact</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<!-- HOME -->
+<div class="view active" id="view-home">
+  <div class="wrap">
+    <section class="hero">
+      <h1>Turn Any Video Into Text</h1>
+      <p class="sub">Fast, free, multilingual transcripts — no account needed.</p>
+
+      <div class="search-card">
+        <div class="search-row">
+          <input id="urlInput" type="text" placeholder="Paste a YouTube, Facebook, Instagram, TikTok, or Pinterest link" />
+          <button class="btn btn-primary" id="submitBtn">Get Transcript</button>
+        </div>
+        <div class="field-error" id="urlError" style="display:none;"></div>
+      </div>
+
+      <div class="platforms">
+        <span>YouTube</span><span>Facebook</span><span>Instagram</span><span>TikTok</span><span>Pinterest</span>
+      </div>
+      <p class="microcopy">No signup • No software required • Fast processing</p>
+    </section>
+
+    <section class="section" id="how">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step-card"><div class="step-num">1</div><h3>Paste your video link</h3><p>Drop in a public URL from any supported platform.</p></div>
+        <div class="step-card"><div class="step-num">2</div><h3>Generate transcript</h3><p>We detect the language and transcribe it with timestamps.</p></div>
+        <div class="step-card"><div class="step-num">3</div><h3>Copy or download</h3><p>Export as TXT, SRT, or PDF — or translate it first.</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Why Trnscrpt?</h2>
+      <div class="why-row">
+        <span class="chip">Free</span>
+        <span class="chip">Fast</span>
+        <span class="chip">Multilingual</span>
+        <span class="chip">Timestamped</span>
+        <span class="chip">Easy</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="ad-slot">Advertisement</div>
+    </section>
+  </div>
+</div>
+
+<!-- PROCESSING -->
+<div class="view" id="view-processing">
+  <div class="proc-wrap">
+    <h2>Generating your transcript</h2>
+    <p class="hint">Your transcript is being generated. This may take a moment.</p>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="stage-list" id="stageList">
+      <div class="stage" data-stage="0"><span class="dot"></span>Detecting language...</div>
+      <div class="stage" data-stage="1"><span class="dot"></span>Extracting audio...</div>
+      <div class="stage" data-stage="2"><span class="dot"></span>Transcribing...</div>
+      <div class="stage" data-stage="3"><span class="dot"></span>Finalizing...</div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="view" id="view-results">
+  <div class="wrap results-wrap">
+    <div class="res-header">
+      <h2>Transcript</h2>
+      <div class="meta-row">
+        <span class="meta-pill">Language: <b id="metaLang">English</b></span>
+        <span class="meta-pill" id="metaPlatform">Platform: <b>YouTube</b></span>
+        <span class="meta-pill status-ok">● Completed</span>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <button class="btn btn-ghost btn-sm" id="copyBtn">Copy</button>
+      <button class="btn btn-ghost btn-sm" id="txtBtn">Download TXT</button>
+      <button class="btn btn-ghost btn-sm" id="srtBtn">Download SRT</button>
+      <button class="btn btn-ghost btn-sm" id="pdfBtn">Download PDF</button>
+      <button class="btn btn-ghost btn-sm" id="summaryBtn">Generate Summary</button>
+    </div>
+
+    <div class="transcript-panel" id="transcriptPanel"></div>
+
+    <div class="panel-toolbar">
+      <select class="lang-select" id="langSelect">
+        <option value="">Translate transcript…</option>
+        <option value="Spanish">Spanish</option>
+        <option value="French">French</option>
+        <option value="German">German</option>
+        <option value="Portuguese">Portuguese</option>
+        <option value="Italian">Italian</option>
+        <option value="Arabic">Arabic</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Bengali">Bengali</option>
+        <option value="Urdu">Urdu</option>
+        <option value="Japanese">Japanese</option>
+        <option value="Korean">Korean</option>
+        <option value="Chinese">Chinese</option>
+        <option value="English">English (original)</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" id="resetLangBtn" style="display:none;">Show original</button>
+    </div>
+
+    <div class="summary-box" id="summaryBox" style="display:none;">
+      <h3>Summary</h3>
+      <p id="summaryText"></p>
+      <h3>Key Points</h3>
+      <ul id="summaryPoints"></ul>
+    </div>
+
+    <div style="margin-top:30px;">
+      <div class="ad-slot">Banner Ad Slot</div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="ad-slot">In-content Ad Slot</div>
+    </div>
+
+    <a href="#" class="new-link" id="newTranscriptLink">← Transcribe another video</a>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div class="view" id="view-about">
+  <div class="wrap page">
+    <a href="#" class="back-link" data-view="home">← Back to home</a>
+    <h1>About Trnscrpt</h1>
+    <p>Trnscrpt is a simple online tool that converts supported publicly accessible video content into searchable text. Paste a link, and get a timestamped transcript in moments — no account required.</p>
+    <h2>What you get</h2>
+    <ul>
+      <li>No account required</li>
+      <li>Multilingual transcription with automatic language detection</li>
+      <li>Timestamped transcripts, down to the segment</li>
+      <li>Export as TXT, SRT, or PDF</li>
+      <li>Optional translation into 12+ languages</li>
+      <li>Optional AI-generated summaries</li>
+    </ul>
+    <p>Transcription quality depends on audio clarity, accents, and background noise. Trnscrpt does its best but doesn't claim perfect accuracy.</p>
+  </div>
+</div>
+
+<!-- HOW IT WORKS (standalone page, mirrors home anchor) -->
+<div class="view" id="view-how">
+  <div class="wrap page">
+    <a href="#" class="back-link" data-view="home">← Back to home</a>
+    <h1>How It Works</h1>
+    <h2>1. Paste your video link</h2>
+    <p>Copy a public video URL from YouTube, Facebook, Instagram, TikTok, or Pinterest and paste it into the box on the homepage.</p>
+    <h2>2. Generate transcript</h2>
+    <p>Trnscrpt detects the platform, extracts the audio, detects the spoken language, and transcribes it with timestamps.</p>
+    <h2>3. Copy or download</h2>
+    <p>Copy the text directly, or export it as TXT, SRT, or PDF. Translate it into another language or generate a short summary first if you like.</p>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<div class="view" id="view-contact">
+  <div class="wrap page">
+    <a href="#" class="back-link" data-view="home">← Back to home</a>
+    <h1>Contact</h1>
+    <p>Questions, feedback, or a takedown request? Reach us at <b>support@trnscrpt.example</b>.</p>
+  </div>
+</div>
+
+<!-- PRIVACY -->
+<div class="view" id="view-privacy">
+  <div class="wrap page">
+    <a href="#" class="back-link" data-view="home">← Back to home</a>
+    <h1>Privacy Policy</h1>
+    <h2>What we collect</h2>
+    <p>We process the video URL you submit, and temporarily store extracted audio and the resulting transcript while your job is processed. We log IP addresses briefly for rate limiting and abuse prevention.</p>
+    <h2>Retention</h2>
+    <p>Temporary media files are deleted after processing. Transcripts and job records expire automatically after a short retention window.</p>
+    <h2>Third parties</h2>
+    <p>We use third-party speech-to-text and translation services to generate transcripts, and may display third-party advertising, which can set cookies.</p>
+    <h2>Your choices</h2>
+    <p>Since no account is required, we hold minimal personal data. Contact us if you'd like data associated with a specific job removed.</p>
+  </div>
+</div>
+
+<!-- TERMS -->
+<div class="view" id="view-terms">
+  <div class="wrap page">
+    <a href="#" class="back-link" data-view="home">← Back to home</a>
+    <h1>Terms of Use</h1>
+    <h2>Authorized use</h2>
+    <p>You may only submit video URLs you have the right to access and transcribe. Do not use Trnscrpt to access private, restricted, or unauthorized content.</p>
+    <h2>Accuracy</h2>
+    <p>Transcripts are generated automatically and may contain errors. We make no guarantee of accuracy.</p>
+    <h2>Independence</h2>
+    <p>Trnscrpt is an independent service and is not affiliated with YouTube, Meta, TikTok, or Pinterest. Availability depends on those platforms remaining accessible.</p>
+    <h2>Abuse</h2>
+    <p>We may rate-limit, block, or terminate access for accounts or IPs that abuse the service.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="footer-links">
+      <a href="#" data-view="about">About</a>
+      <a href="#" data-view="privacy">Privacy Policy</a>
+      <a href="#" data-view="terms">Terms of Use</a>
+      <a href="#" data-view="contact">Contact</a>
+    </div>
+    <p class="disclaimer">Users must have rights to content submitted. We are not affiliated with YouTube, Meta, TikTok, or Pinterest.</p>
+    <p class="copyright">© 2026 Trnscrpt. All rights reserved.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ---------- Navigation ----------
+  const views = document.querySelectorAll('.view');
+  const navLinks = document.querySelectorAll('nav.main a');
+  function showView(name){
+    views.forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    navLinks.forEach(a => a.classList.toggle('active', a.dataset.view === name));
+    document.getElementById('mainNav').classList.remove('open');
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  document.querySelectorAll('[data-view]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.preventDefault(); showView(el.dataset.view); });
+  });
+  document.getElementById('navToggle').addEventListener('click', ()=>{
+    document.getElementById('mainNav').classList.toggle('open');
+  });
+
+  // ---------- URL validation ----------
+  const DOMAIN_PATTERNS = [
+    /youtube\.com/i, /youtu\.be/i,
+    /facebook\.com/i, /fb\.watch/i,
+    /instagram\.com/i,
+    /tiktok\.com/i,
+    /pinterest\.com/i, /pin\.it/i
+  ];
+  function isSupportedUrl(raw){
+    try{
+      const u = new URL(raw.trim());
+      if(!/^https?:$/.test(u.protocol)) return false;
+      return DOMAIN_PATTERNS.some(p => p.test(u.hostname));
+    }catch(e){ return false; }
+  }
+  function detectPlatform(raw){
+    const host = (()=>{ try{return new URL(raw).hostname;}catch(e){return '';} })();
+    if(/youtube|youtu\.be/i.test(host)) return 'YouTube';
+    if(/facebook|fb\.watch/i.test(host)) return 'Facebook';
+    if(/instagram/i.test(host)) return 'Instagram';
+    if(/tiktok/i.test(host)) return 'TikTok';
+    if(/pinterest|pin\.it/i.test(host)) return 'Pinterest';
+    return 'Unknown';
+  }
+
+  // ---------- Backend connection ----------
+  // Point this at your deployed backend (see backend/README.md).
+  // Leave as-is for local dev if the API runs on the default port.
+  const API_BASE_URL = window.TRNSCRPT_API_BASE_URL || 'http://localhost:4000';
+
+  class ApiError extends Error {
+    constructor(message, status){ super(message); this.status = status; }
+  }
+
+  async function apiRequest(path, options = {}){
+    let res;
+    try{
+      res = await fetch(API_BASE_URL + path, {
+        headers: {'Content-Type':'application/json'},
+        ...options
+      });
+    }catch(e){
+      // Network failure, CORS block, backend down, etc. — never show the
+      // raw error to the user.
+      throw new ApiError("We couldn't reach the server. Please try again.", 0);
+    }
+    if(!res.ok){
+      let message = 'Something went wrong. Please try again.';
+      try{
+        const body = await res.json();
+        if(body?.error) message = body.error;
+      }catch(e){ /* non-JSON error body — keep generic message */ }
+      throw new ApiError(message, res.status);
+    }
+    const contentType = res.headers.get('content-type') || '';
+    return contentType.includes('application/json') ? res.json() : res;
+  }
+
+  let currentJobId = null;
+  let currentSegments = [];
+  let currentLang = 'English';
+  let currentSourceLang = 'English';
+
+  function fmtTime(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return m+':'+s;
+  }
+
+  function renderTranscript(segments){
+    const panel = document.getElementById('transcriptPanel');
+    panel.innerHTML = '';
+    segments.forEach(seg=>{
+      const row = document.createElement('div');
+      row.className = 'seg';
+      row.innerHTML = `<span class="ts">${fmtTime(seg.start)}</span><span class="txt">${seg.text}</span>`;
+      panel.appendChild(row);
+    });
+  }
+
+  // ---------- Submit flow ----------
+  const urlInput = document.getElementById('urlInput');
+  const urlError = document.getElementById('urlError');
+  const submitBtn = document.getElementById('submitBtn');
+
+  submitBtn.addEventListener('click', handleSubmit);
+  urlInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') handleSubmit(); });
+
+  async function handleSubmit(){
+    const val = urlInput.value.trim();
+    urlError.style.display = 'none';
+    if(!val || !isSupportedUrl(val)){
+      urlError.textContent = 'Please enter a valid YouTube, Facebook, Instagram, TikTok, or Pinterest video URL.';
+      urlError.style.display = 'block';
+      return;
+    }
+    const platform = detectPlatform(val);
+    document.getElementById('metaPlatform').innerHTML = `Platform: <b>${platform}</b>`;
+
+    submitBtn.disabled = true;
+    try{
+      const job = await apiRequest('/api/transcripts', {
+        method: 'POST',
+        body: JSON.stringify({ url: val })
+      });
+      currentJobId = job.jobId;
+      await runProcessing();
+    }catch(err){
+      urlError.textContent = err.message || 'Something went wrong. Please try again.';
+      urlError.style.display = 'block';
+    }finally{
+      submitBtn.disabled = false;
+    }
+  }
+
+  // Stage labels returned by GET /api/transcripts/:jobId/status must match
+  // these element labels exactly so we can highlight the right step.
+  const STAGE_ORDER = [
+    'Detecting language...',
+    'Extracting audio...',
+    'Transcribing...',
+    'Finalizing...'
+  ];
+
+  function setStageUI(label){
+    const stages = document.querySelectorAll('.stage');
+    const idx = STAGE_ORDER.indexOf(label);
+    stages.forEach((s, si)=>{
+      s.classList.toggle('active', si === idx);
+      s.classList.toggle('done', idx >= 0 && si < idx);
+    });
+    const fill = document.getElementById('progressFill');
+    if(idx >= 0){
+      fill.style.width = Math.round(((idx + 1) / STAGE_ORDER.length) * 100) + '%';
+    }
+  }
+
+  async function runProcessing(){
+    showView('processing');
+    document.querySelectorAll('.stage').forEach(s => s.classList.remove('active','done'));
+    document.getElementById('progressFill').style.width = '0%';
+
+    const POLL_INTERVAL_MS = 2000;
+    const MAX_WAIT_MS = 6 * 60 * 1000; // avoid polling forever on a stuck job
+    const startedAt = Date.now();
+
+    while(true){
+      let status;
+      try{
+        status = await apiRequest(`/api/transcripts/${currentJobId}/status`);
+      }catch(err){
+        return showProcessingError(err.message);
+      }
+
+      if(status.stage) setStageUI(status.stage);
+
+      if(status.status === 'completed'){
+        document.getElementById('progressFill').style.width = '100%';
+        document.querySelectorAll('.stage').forEach(s => { s.classList.add('done'); s.classList.remove('active'); });
+        return loadResults();
+      }
+      if(status.status === 'failed'){
+        return showProcessingError(status.error || 'Something went wrong while generating your transcript. Please try again.');
+      }
+      if(Date.now() - startedAt > MAX_WAIT_MS){
+        return showProcessingError("This is taking longer than expected. Please try again.");
+      }
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    }
+  }
+
+  function showProcessingError(message){
+    showView('home');
+    urlError.textContent = message;
+    urlError.style.display = 'block';
+  }
+
+  async function loadResults(){
+    let job;
+    try{
+      job = await apiRequest(`/api/transcripts/${currentJobId}`);
+    }catch(err){
+      return showProcessingError(err.message);
+    }
+    currentSegments = job.segments || [];
+    currentLang = job.language || 'Unknown';
+    currentSourceLang = currentLang;
+    document.getElementById('metaLang').textContent = currentLang;
+    document.getElementById('metaPlatform').innerHTML = `Platform: <b>${job.platform || 'Unknown'}</b>`;
+    document.getElementById('langSelect').value = '';
+    document.getElementById('resetLangBtn').style.display = 'none';
+    document.getElementById('summaryBox').style.display = 'none';
+    renderTranscript(currentSegments);
+    showView('results');
+  }
+
+  document.getElementById('newTranscriptLink').addEventListener('click', (e)=>{
+    e.preventDefault();
+    urlInput.value = '';
+    showView('home');
+  });
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> t.classList.remove('show'), 1600);
+  }
+
+  // ---------- Controls ----------
+  document.getElementById('copyBtn').addEventListener('click', ()=>{
+    const text = currentSegments.map(s => `[${fmtTime(s.start)}] ${s.text}`).join('\n');
+    navigator.clipboard?.writeText(text).catch(()=>{});
+    showToast('Copied!');
+  });
+
+  // Exports are generated server-side and streamed straight from the API —
+  // this just opens/downloads the real endpoint, no client-side generation.
+  function downloadFromApi(path, filename){
+    const a = document.createElement('a');
+    a.href = API_BASE_URL + path;
+    a.download = filename;
+    a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  document.getElementById('txtBtn').addEventListener('click', ()=>{
+    if(!currentJobId) return;
+    downloadFromApi(`/api/transcripts/${currentJobId}/txt`, 'transcript.txt');
+    showToast('Downloading TXT');
+  });
+
+  document.getElementById('srtBtn').addEventListener('click', ()=>{
+    if(!currentJobId) return;
+    downloadFromApi(`/api/transcripts/${currentJobId}/srt`, 'transcript.srt');
+    showToast('Downloading SRT');
+  });
+
+  document.getElementById('pdfBtn').addEventListener('click', ()=>{
+    if(!currentJobId) return;
+    downloadFromApi(`/api/transcripts/${currentJobId}/pdf`, 'transcript.pdf');
+    showToast('Downloading PDF');
+  });
+
+  // ---------- Translation ----------
+  document.getElementById('langSelect').addEventListener('change', async (e)=>{
+    const lang = e.target.value;
+    if(!lang || !currentJobId) return;
+
+    if(lang === 'English' && currentSourceLang !== 'English'){
+      // "English (original)" only makes sense as a real option when the
+      // source wasn't English; otherwise it's just the original already showing.
+    }
+
+    const langSelect = e.target;
+    langSelect.disabled = true;
+    try{
+      if(lang === currentSourceLang){
+        const job = await apiRequest(`/api/transcripts/${currentJobId}`);
+        currentSegments = job.segments || [];
+        currentLang = job.language;
+        document.getElementById('resetLangBtn').style.display = 'none';
+      } else {
+        const result = await apiRequest(`/api/transcripts/${currentJobId}/translate`, {
+          method: 'POST',
+          body: JSON.stringify({ targetLanguage: lang })
+        });
+        currentSegments = result.segments || [];
+        currentLang = result.language;
+        document.getElementById('resetLangBtn').style.display = 'inline-block';
+      }
+      document.getElementById('metaLang').textContent = currentLang;
+      renderTranscript(currentSegments);
+    }catch(err){
+      showToast(err.message || 'Translation failed. Please try again.');
+      langSelect.value = '';
+    }finally{
+      langSelect.disabled = false;
+    }
+  });
+  document.getElementById('resetLangBtn').addEventListener('click', ()=>{
+    document.getElementById('langSelect').value = currentSourceLang;
+    document.getElementById('langSelect').dispatchEvent(new Event('change'));
+  });
+
+  // ---------- Summary ----------
+  document.getElementById('summaryBtn').addEventListener('click', async ()=>{
+    if(!currentJobId) return;
+    const btn = document.getElementById('summaryBtn');
+    const box = document.getElementById('summaryBox');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    try{
+      const result = await apiRequest(`/api/transcripts/${currentJobId}/summary`, { method: 'POST' });
+      document.getElementById('summaryText').textContent = result.summary || '';
+      const ul = document.getElementById('summaryPoints');
+      ul.innerHTML = '';
+      (result.keyPoints || []).forEach(p=>{
+        const li = document.createElement('li');
+        li.textContent = p;
+        ul.appendChild(li);
+      });
+      box.style.display = 'block';
+      box.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }catch(err){
+      showToast(err.message || 'Could not generate a summary right now.');
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Generate Summary';
+    }
+  });
+})();
+</script>
+</body>
+</html>
